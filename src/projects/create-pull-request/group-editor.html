@@ -1,0 +1,220 @@
+<link rel="import" href="../../../bower_components/paper-fab/paper-fab.html">
+<link rel="import" href="../../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../../bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="../../../bower_components/polymer-dragula/polymer-dragula.html">
+<link rel="import" href="../../../bower_components/polymer-dragula/polymer-dragula-styles.html">
+<link rel="import" href="group-block.html">
+
+<dom-module id="group-editor">
+  <template>
+    <style include="polymer-dragula-styles">
+      :host {
+        display: block;
+      }
+      header {
+        margin: 2em 2em 0 2em;
+        border-bottom: solid 1px var(--secondary-text-color);
+        margin-bottom: 1em;
+        padding: 1em 0;
+        display: flex;
+      }
+      header h2 {
+        margin: 0;
+        font-weight: 300;
+        flex: 1
+      }
+      header .add {
+        background-color: var(--primary-background-color);
+        padding: 2px;
+        padding: 0.5em;
+        height: 2em;
+        width: auto;
+      }
+      #groups {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      group-block {
+        margin: 0.65em;
+      }
+
+      .row {
+    border: 1px dotted #999999;
+    margin: 15px;
+    width: 100%;
+    padding: 15px;
+}
+
+.column {
+    border: 1px dotted #0d47a1;
+    margin: 5px;
+    display: block;
+    padding: 15px;
+    background-color: #ffcc80;
+}
+
+.red {
+    background-color: red;
+}
+
+.green {
+    background-color: green;
+}
+
+.blue {
+    background-color: blue;
+}
+
+.handle-inner, .handle {
+    border: 3px solid;
+    border-radius: 15px;
+    padding: 5px;
+    cursor: move;
+    cursor: grab;
+    cursor: -moz-grab;
+    cursor: -webkit-grab;
+    margin-bottom: 5px;
+    display: inline-block;
+}
+    </style>
+
+    <diff-parser diff="[[diff]]" base-url="[[baseUrl]]" hunks="{{hunks}}"></diff-parser>
+    <hunk-sorter id="sorter" raw-hunks="[[hunks]]" groups="{{orderedGroups}}" pull-request="[[pullRequest]]"></hunk-sorter>
+
+    <header>
+      <h2>Create and edit groups</h2>
+      <paper-button raised class="add" icon="add" on-tap="_newGroup"><iron-icon icon="add"></iron-icon>Add</paper-button>
+    </header>
+    <!-- <div id="groups"> -->
+    <polymer-dragula id="groups" sub-container-selector=".col-holder" fn-moves="[[fnMoves]]">
+      <div id="container" class="col-holder">
+        <template is="dom-repeat" items="[[orderedGroups]]">
+          <group-block group="[[item]]"></group-block>
+        </template>
+      </div>
+    <!-- </div> -->
+    </polymer-dragula>
+
+    <polymer-dragula id="column-dragger" sub-container-selector=".col-holder" fn-moves="[[fnMovesInner]]">
+            <polymer-dragula id="row-dragger" fn-moves="[[fnMoves]]">
+                <div class="row-holder">
+                    <template is="dom-repeat" items="[[data.rows]]">
+                        <div class$="row [[item.className]]">
+                            <strong class="handle">drag handle</strong>
+                            <div class="col-holder">
+                                <template is="dom-repeat" items="[[item.columns]]">
+                                    <div class="column">
+                                        <strong class="handle-inner">drag handle</strong>
+                                        <p>[[item.body]]</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </polymer-dragula>
+        </polymer-dragula>
+
+  </template>
+  <script>
+    Polymer({
+      is: 'group-editor',
+
+      properties: {
+        baseUrl: String,
+        diff: String,
+        hunks: {
+          type: Array,
+          value: function() {
+            return [];
+          }
+        },
+        orderedGroups: {
+          type: Array,
+          notify: true
+        },
+        pullRequest: Object,
+        sortable: Object,
+
+        fnMoves: {
+                    type: Function,
+                    value: function () {
+                        return function (el, container, handle) {
+                            return handle.classList.contains('handle');
+                        }
+                    }
+                },
+
+                fnMovesInner: {
+                    type: Function,
+                    value: function () {
+                        return function (el, container, handle) {
+                            return handle.classList.contains('handle-inner');
+                        }
+                    }
+                },
+
+
+        data: {
+                    type: Object,
+                    value: function () {
+                        return {
+                            rows: [
+                                {
+                                    className: 'red',
+                                    columns: [
+                                        {body: "item-1"},
+                                        {body: "item-2"}
+                                    ]
+                                },
+                                {
+                                    className: 'green',
+                                    columns: [
+                                        {body: "item-3"},
+                                        {body: "item-4"}
+                                    ]
+                                },
+                                {
+                                    className: 'blue',
+                                    columns: [
+                                        {body: "item-5"},
+                                        {body: "item-6"},
+                                        {body: "item-7"}
+                                    ]
+                                }
+                            ]
+                        };
+
+                    }
+                }
+      },
+
+      listeners: {
+          'dragula-drag': 'handleEvent',
+          'dragula-dragend': 'handleEvent',
+          'dragula-drop': 'handleEvent',
+          'dragula-cancel': 'handleEvent',
+          'dragula-remove': 'handleEvent',
+          'dragula-shadow': 'handleEvent',
+          'dragula-over': 'handleEvent',
+          'dragula-out': 'handleEvent',
+          'dragula-cloned': 'handleEvent'
+      },
+
+      handleEvent: function (event) {
+          console.log(event.type, event.detail);
+      },
+
+      attached: function () {
+        // this.sortable = Sortable.create(this.$.groups, {
+        //   group: 'group'
+        // });
+      },
+
+      _newGroup: function () {
+        this.$.sorter.addGroup();
+      }
+    });
+  </script>
+</dom-module>
